@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node tools/serve.mjs",
     "build": "node tools/build.mjs",
-    "build:embed": "node tools/build.mjs --embed"
+    "build:embed": "node tools/build.mjs --embed --cdn"
   },
   "devDependencies": {
     "esbuild": "0.20.2"
