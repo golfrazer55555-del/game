@@ -22,7 +22,53 @@ export class World {
     this.dirtyOwners = new Set();
     this.structDirty = false;
     this.removedByOwner = new Float64Array(256);  // 부서진 구조 블록 수
+    this.structCount = new Float64Array(256);     // 소유자별 남은 구조 블록
+    this.standing = new Float64Array(256);        // 소유자별 1 m 이상 높이에 서 있는 구조 블록
+    this.rubOut = new Float64Array(256);          // 부지 밖 잔해
+    this.rubZone = new Float64Array(256);         // 목표 구역 안 잔해
+    this.rubTotal = new Float64Array(256);
+    this.lotRect = null;                          // {x0,x1,z0,z1} 칸 단위
+    this.zoneRect = null;
     this.version = 0;
+  }
+
+  // 소유자별 집계 (sign = +1 추가, -1 제거)
+  account(x, y, z, m, own, sign) {
+    if (m === 0) return;
+    if (m & RUBBLE) {
+      this.rubTotal[own] += sign;
+      const L = this.lotRect;
+      if (L && (x < L.x0 || x > L.x1 || z < L.z0 || z > L.z1)) this.rubOut[own] += sign;
+      const Z = this.zoneRect;
+      if (Z && x >= Z.x0 && x <= Z.x1 && z >= Z.z0 && z <= Z.z1) this.rubZone[own] += sign;
+    } else {
+      this.structCount[own] += sign;
+      if (y >= 4) this.standing[own] += sign;
+    }
+  }
+
+  // 구조 검사를 다시 부르지 않는 겉모습 변경 (균열 표시)
+  setSilent(i, m) {
+    const old = this.mat[i];
+    if (!old || !m || old === m) return;
+    const x = i % GX, z = ((i / GX) | 0) % GZ, y = (i / LAYER) | 0;
+    this.account(x, y, z, old, this.own[i], -1);
+    this.mat[i] = m;
+    this.account(x, y, z, m, this.own[i], 1);
+    this.version++;
+    const ci = this.chunkOf(x, y, z);
+    // 메시만 갱신
+    const lx = x & 15, ly = y & 15, lz = z & 15;
+    if (lx > 0 && lx < 15 && ly > 0 && ly < 15 && lz > 0 && lz < 15) { if (!this.meshDirty[ci]) { this.meshDirty[ci] = 1; this.meshDirtyList.push(ci); } }
+    else this.touchMeshOnly(x, y, z);
+  }
+
+  touchMeshOnly(x, y, z) {
+    const cx0 = (x - 1) >> 4, cx1 = (x + 1) >> 4, cy0 = (y - 1) >> 4, cy1 = (y + 1) >> 4, cz0 = (z - 1) >> 4, cz1 = (z + 1) >> 4;
+    for (let cy = Math.max(0, cy0); cy <= Math.min(NCY - 1, cy1); cy++) for (let cz = Math.max(0, cz0); cz <= Math.min(NCZ - 1, cz1); cz++) for (let cx = Math.max(0, cx0); cx <= Math.min(NCX - 1, cx1); cx++) {
+      const c = cx + NCX * (cz + NCZ * cy);
+      if (!this.meshDirty[c]) { this.meshDirty[c] = 1; this.meshDirtyList.push(c); }
+    }
   }
 
   // ───── 좌표 ─────
@@ -53,8 +99,10 @@ export class World {
     const old = this.mat[i];
     if (old === 0 && m !== 0) this.chunkCount[this.chunkOf(x, y, z)]++;
     else if (old !== 0 && m === 0) this.chunkCount[this.chunkOf(x, y, z)]--;
+    this.account(x, y, z, old, this.own[i], -1);
     this.mat[i] = m;
     this.own[i] = m ? owner : 0;
+    this.account(x, y, z, m, this.own[i], 1);
   }
 
   chunkOf(x, y, z) { return (x >> 4) + NCX * ((z >> 4) + NCZ * (y >> 4)); }
@@ -67,8 +115,10 @@ export class World {
     const ci = this.chunkOf(x, y, z);
     if (old === 0 && m !== 0) this.chunkCount[ci]++;
     else if (old !== 0 && m === 0) this.chunkCount[ci]--;
+    this.account(x, y, z, old, this.own[i], -1);
     this.mat[i] = m;
     this.own[i] = m ? owner : 0;
+    this.account(x, y, z, m, this.own[i], 1);
     this.touch(x, y, z, ci);
     if ((old !== 0) !== (m !== 0) || isStruct(old) !== isStruct(m)) this.noteStructChange(x, y, z, old, i);
   }
@@ -83,6 +133,7 @@ export class World {
     this.mat[i] = 0;
     const own = this.own[i];
     this.own[i] = 0;
+    this.account(x, y, z, old, own, -1);
     this.touch(x, y, z, ci);
     if (isStruct(old)) this.removedByOwner[own]++;
     this.noteStructChange(x, y, z, old, i, own);
@@ -156,6 +207,8 @@ export class World {
     this.rubbleActive.clear();
     this.owners = [{ name: '잔해', kind: 'none' }];
     this.removedByOwner.fill(0);
+    for (const a of [this.structCount, this.standing, this.rubOut, this.rubZone, this.rubTotal]) a.fill(0);
+    this.lotRect = null; this.zoneRect = null;
     this.dirtyOwners.clear();
     this.structDirty = false;
     this.takeDamageBox();
@@ -167,7 +220,7 @@ export class World {
     const cnt = new Float64Array(256);
     const mat = this.mat, own = this.own;
     for (let i = 0; i < N; i++) if (mat[i] && !(mat[i] & RUBBLE)) cnt[own[i]]++;
-    for (let o = 1; o < this.owners.length; o++) this.owners[o].initial = cnt[o];
+    for (let o = 1; o < this.owners.length; o++) { this.owners[o].initial = cnt[o]; this.owners[o].initialStanding = this.standing[o]; }
     this.removedByOwner.fill(0);
     return cnt;
   }
@@ -208,7 +261,8 @@ export class World {
 
   snapshot() {
     return { mat: this.mat.slice(), own: this.own.slice(), chunkCount: this.chunkCount.slice(), rubble: [...this.rubbleActive],
-      removed: this.removedByOwner.slice(), damage: { ...this.damage }, dirtyOwners: [...this.dirtyOwners], structDirty: this.structDirty };
+      removed: this.removedByOwner.slice(), damage: { ...this.damage }, dirtyOwners: [...this.dirtyOwners], structDirty: this.structDirty,
+      counts: [this.structCount, this.standing, this.rubOut, this.rubZone, this.rubTotal].map((a) => a.slice()) };
   }
   restore(s) {
     this.mat.set(s.mat); this.own.set(s.own); this.chunkCount.set(s.chunkCount);
@@ -217,6 +271,7 @@ export class World {
     Object.assign(this.damage, s.damage);
     this.dirtyOwners = new Set(s.dirtyOwners);
     this.structDirty = s.structDirty;
+    [this.structCount, this.standing, this.rubOut, this.rubZone, this.rubTotal].forEach((a, k) => a.set(s.counts[k]));
     this.markAllDirty();
   }
 }
