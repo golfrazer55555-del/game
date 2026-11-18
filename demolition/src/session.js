@@ -175,7 +175,10 @@ export class Session {
     const c = this.machines.crane;
     const period = 2 * Math.PI * Math.sqrt(Math.max(4, c.s.rope) / 9.81);
     const phase = (t % period) / period;
-    return { lx: 0, ly: phase < 0.5 ? -1 : 1, rx: 0, ry: 0, a: false, b: false, iso: false };
+    // 처음 붐 각도를 중심으로 박자 맞춰 올렸다 내리기 (각도가 한쪽으로 흘러가지 않게 보정)
+    if (this.demoLuff === undefined) this.demoLuff = c.s.luff;
+    const ly = Math.max(-1, Math.min(1, (phase < 0.5 ? -0.8 : 0.8) + (this.demoLuff - c.s.luff) * 4));
+    return { lx: 0, ly, rx: 0, ry: 0, a: false, b: false, iso: false };
   }
 
   handleEvents() {

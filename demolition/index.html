@@ -188,9 +188,18 @@ kbd { background: #000; border: 1px solid var(--edge); padding: 0 4px; font-fami
   #btn-travel { right: calc(var(--sr) + 166px); bottom: calc(var(--sb) + 104px); }
   .tl { width: 206px; padding: 6px 8px; }
   .gauges { min-width: 240px; }
-  .mach button { width: 64px; }
-  .mach button svg { width: 22px; height: 22px; }
-  .att { right: calc(var(--sr) + 78px); }
+  .mach { grid-auto-flow: column; top: calc(var(--st) + 54px); gap: 4px; }
+  .mach button { width: 58px; padding: 4px 2px; }
+  .mach button svg { width: 20px; height: 20px; }
+  .att { grid-auto-flow: column; right: calc(var(--sr) + 8px); top: calc(var(--st) + 112px); gap: 4px; }
+  .att button { padding: 5px 6px; }
+  .struct-legend { bottom: auto; top: calc(var(--st) + 130px); }
+  .blast { padding: 5px 8px; gap: 4px; width: min(620px, 74vw); }
+  .blast .chip { padding: 3px 6px; min-width: 34px; }
+  .blast .fire { font-size: 12px; padding: 7px 12px; }
+  .blast .info { display: none; }
+  .toast-wrap { width: min(460px, 50vw); left: 40%; }
+  .toast { padding: 4px 8px; }
   .sheet-head h2 { font-size: 18px; }
   .brief-grid, .result-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
 }

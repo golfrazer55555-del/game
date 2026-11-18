@@ -348,7 +348,7 @@ export class UI {
         <button class="chip ${session.chargeType === 'big' ? 'on' : ''}" data-ct="big" ${big ? '' : 'disabled'} style="${session.chargeType === 'big' ? 'background:#fff' : ''}">${CHARGES.big.name}${big ? '' : ' (차고)'}</button>
         <span class="dim" style="margin-left:auto">${ex.list.length}개 · ${session.free ? '무료' : won(cost)}</span></div>`;
       html += `<div class="row"><b>지연</b>${DELAYS.map((d, i) => `<button class="chip ${sel && sel.delay === d ? 'on' : ''}" data-d="${d}" style="border-color:#${DELAY_COLORS[i].toString(16).padStart(6, '0')};${sel && sel.delay === d ? 'background:#' + DELAY_COLORS[i].toString(16).padStart(6, '0') : ''}">${d}s</button>`).join('')}</div>`;
-      html += `<div class="row"><span class="dim">${sel ? `선택한 장약: ${CHARGES[sel.type].name}, ${sel.delay}초 뒤 폭발` : '건물을 눌러 장약을 설치하세요 (기둥·내력벽 밑동이 효과적)'}</span></div>`;
+      html += `<div class="row info"><span class="dim">${sel ? `선택한 장약: ${CHARGES[sel.type].name}, ${sel.delay}초 뒤 폭발` : '건물을 눌러 장약을 설치하세요 (기둥·내력벽 밑동이 효과적)'}</span></div>`;
       html += `<div class="row"><button class="px-btn small" data-act="del" ${sel ? '' : 'disabled'}>선택 삭제</button><button class="px-btn small" data-act="clear" ${ex.list.length ? '' : 'disabled'}>모두 삭제</button>
         <button class="px-btn danger fire" data-act="fire" ${ex.list.length ? '' : 'disabled'}>발파!</button></div>`;
     } else if (st === 'countdown') {

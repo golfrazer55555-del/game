@@ -85,7 +85,7 @@ export class Crane {
       s.tv = approach(s.tv, 0, 2 * dt); s.tw = approach(s.tw, 0, 1 * dt);
       s.slewVel = approach(s.slewVel, -lx * 0.5, 0.9 * dt);
     }
-    const lmiBlock = s.lmi > 0.97;
+    const lmiBlock = s.lmi > 1.0;
     let luffCmd = s.travel ? 0 : ly;
     if (lmiBlock && luffCmd < 0) luffCmd = 0;   // 과부하 방지: 붐 내리기 차단
     s.luffVel = approach(s.luffVel, luffCmd * 9 * DEG, 18 * DEG * dt);
@@ -130,17 +130,18 @@ export class Crane {
         const nx = dx / len, ny = dy / len, nz = dz / len;
         bp[0] = tip[0] + nx * s.rope; bp[1] = tip[1] + ny * s.rope; bp[2] = tip[2] + nz * s.rope;
         const vr = bv[0] * nx + bv[1] * ny + bv[2] * nz;
-        if (vr > 0) { bv[0] -= nx * vr; bv[1] -= ny * vr; bv[2] -= nz * vr; tension += this.ballMass * vr / h; }
+        // 줄이 팽팽해지는 순간의 충격 하중: 와이어가 늘어나는 시간(약 0.15초)에 걸쳐 전달된다
+        if (vr > 0) { bv[0] -= nx * vr; bv[1] -= ny * vr; bv[2] -= nz * vr; tension += this.ballMass * vr / 0.15; }
         tension += this.ballMass * Math.max(0, -GRAVITY * ny + (bv[0] ** 2 + bv[1] ** 2 + bv[2] ** 2) / s.rope);
       }
       this.collide(sim, h);
     }
     tension /= n;
-    s.tension = s.tension * 0.8 + tension * 0.2;
+    s.tension += (tension - s.tension) * (1 - Math.exp(-dt / 0.2));
     // 과부하 표시기 (LMI)
     const load = s.tension / GRAVITY / 1000 + 0.4;
     s.lmi = load / this.capacity();
-    if (s.lmi > 1.08) { s.overloadT += dt; if (s.overloadT > 0.4) { s.overloads++; s.overloadT = -2; sim.fx.push({ t: 'overload' }); } }
+    if (s.lmi > 1.12) { s.overloadT += dt; if (s.overloadT > 0.5) { s.overloads++; s.overloadT = -2; sim.fx.push({ t: 'overload' }); } }
     else if (s.overloadT > 0) s.overloadT = 0; else s.overloadT = Math.min(0, s.overloadT + dt);
     s.tilt = s.tilt * 0.9 + clamp((s.lmi - 1) * 0.04, 0, 0.05) * 0.1;
     s.engine = 0.2 + Math.min(1, Math.abs(s.slewVel) * 2 + Math.abs(s.luffVel) * 6 + Math.abs(s.ropeVel) * 0.3 + Math.abs(s.tv));

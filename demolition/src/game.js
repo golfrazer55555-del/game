@@ -106,6 +106,8 @@ export class Game {
     if (!this.renderer) return;
     this.renderer.setSize(innerWidth, innerHeight, false);
     this.camera.aspect = innerWidth / innerHeight;
+    this.viewOffset = -1;   // 다음 프레임에 화면 이동을 다시 계산
+    this.camera.clearViewOffset();
     this.camera.updateProjectionMatrix();
   }
 
@@ -317,6 +319,13 @@ export class Game {
         if (mc.kind === 'crane') { this.audio.setWinch(mc.s.ropeVel / 3); this.audio.setAlarm(mc.s.lmi > 0.92); this.audio.setHydraulic(Math.min(1, Math.abs(mc.s.slewVel) * 2 + Math.abs(mc.s.luffVel) * 8)); }
         else { this.audio.setWinch(0); this.audio.setAlarm(false); this.audio.setHydraulic(Math.min(1, Math.abs(mc.s.boomV) * 3 + Math.abs(mc.s.armV) * 3 + Math.abs(mc.s.attV) * 2 + Math.abs(mc.s.swingV))); }
       } else if (!s.demo) { this.audio.setEngine(false); this.audio.setWinch(0); this.audio.setAlarm(false); this.audio.setHydraulic(0); }
+      // 발파 계획 중에는 아래쪽 패널에 가리지 않도록 화면을 위로 올려 그린다
+      const wantOffset = !s.demo && s.activeKind === 'blast' && this.ui.screen === 'play' ? Math.round(innerHeight * (innerHeight < 450 ? 0.2 : 0.12)) : 0;
+      if (wantOffset !== this.viewOffset) {
+        this.viewOffset = wantOffset;
+        if (wantOffset) this.camera.setViewOffset(innerWidth, innerHeight, 0, wantOffset, innerWidth, innerHeight);
+        else this.camera.clearViewOffset();
+      }
       const cab = s.active ? () => s.active.cabView() : null;
       if (s.demo) {
         this.rig.yaw += dt * 0.04;
