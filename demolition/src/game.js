@@ -176,6 +176,9 @@ export class Game {
     if (!this.session || this.session.demo) return;
     this.paused = on;
     this.input.zero();
+    const ex = this.session.explosives;
+    this.audio.setSiren(!on && !!ex && ex.state === 'countdown');
+    if (on) { this.audio.setRumble(0); this.audio.setAlarm(false); }
     if (on) this.ui.show('pause'); else this.ui.hideAllScreens();
   }
 
@@ -304,6 +307,7 @@ export class Game {
       if (!this.paused || s.demo) s.update(dt);
       else this.input.clearEdges();
       this.presenter.consume(s.sim);
+      s.fxSeen = 0;
       this.presenter.update(s.sim, this.paused && !s.demo ? 0 : dt * s.timeScale);
       s.sync(t / 1000, this.quality.meshBudgetMs);
       // 장비 소리

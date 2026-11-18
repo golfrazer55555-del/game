@@ -180,7 +180,11 @@ export class Session {
 
   handleEvents() {
     const sim = this.sim, ui = this.g.ui, audio = this.g.audio;
-    for (const e of sim.fx) {
+    // 한 프레임에 여러 틱이 돌 수 있으므로 아직 처리하지 않은 이벤트만
+    const from = this.fxSeen || 0;
+    this.fxSeen = sim.fx.length;
+    for (let k = from; k < sim.fx.length; k++) {
+      const e = sim.fx[k];
       switch (e.t) {
         case 'count':
           if (!this.replaying) { ui.setCount(e.n > 0 ? e.n : null); audio.beep(e.n > 0 ? 880 : 1320, e.n > 0 ? 0.12 : 0.3); }
@@ -275,6 +279,7 @@ export class Session {
 
   restoreSnapshot(snap) {
     this.sim.restore(snap);
+    this.fxSeen = 0;
     this.chunkView.update(0, true);
     this.bodyView.clear();
     this.g.presenter.clear();
