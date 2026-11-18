@@ -1,15 +1,8 @@
 {
-  "name": "line-of-fire-1944",
-  "version": "0.1.0",
+  "name": "game",
   "private": true,
-  "description": "포화의 전선: 블록 전차 1:1 턴제 포격전 (프로토타입)",
-  "type": "module",
+  "description": "철거왕(맨 위) + 포화의 전선(line-of-fire/)",
   "scripts": {
-    "start": "node tools/serve.mjs",
-    "build": "node tools/build.mjs",
-    "build:embed": "node tools/build.mjs --embed --cdn"
-  },
-  "devDependencies": {
-    "esbuild": "0.20.2"
+    "start": "node demolition/tools/serve.mjs --repo"
   }
 }
