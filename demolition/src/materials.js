@@ -53,8 +53,8 @@ def(M.STEEL,          '강철',         0x5c6670, 'metal',    7850, 4.00, 6.00, 
 def(M.STEEL_RUST,     '녹슨 강철',     0x8a5a3c, 'metal',    7850, 3.00, 4.50, 40);
 def(M.METAL_SHEET,    '철판',         0x9aa5ad, 'metal',    1200, 0.20, 0.30, 20);
 def(M.METAL_RED,      '철판',         0xb0473b, 'metal',    1200, 0.20, 0.30, 20);
-def(M.ROOF_TILE,      '기와',         0x4a5566, 'brick',    1800, 0.30, 0.22, 8);
-def(M.ROOF_RED,       '지붕',         0xa34636, 'brick',    1800, 0.30, 0.22, 8);
+def(M.ROOF_TILE,      '기와',         0x4a5566, 'brick',    1800, 0.30, 0.22, 24);
+def(M.ROOF_RED,       '지붕',         0xa34636, 'brick',    1800, 0.30, 0.22, 24);
 def(M.TILE_FLOOR,     '바닥 타일',     0xc8bfa8, 'concrete', 2200, 0.90, 0.80, 24);
 def(M.FURN_WOOD,      '가구',         0xa87b4f, 'wood',      500, 0.20, 0.10, 6);
 def(M.FURN_FABRIC,    '소파',         0x8c3b46, 'soft',      300, 0.15, 0.08, 6);

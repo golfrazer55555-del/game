@@ -17,7 +17,7 @@ export const E_UNIT = 2600;
 export const DESIGN_RATIO = 0.32;  // 멀쩡한 건물의 가장 위험한 층 응력비 (낮을수록 튼튼)
 export const WARN_RATIO = 0.62;    // 이 이상이면 균열·삐걱 소리로 붕괴를 예고
 export const STRUCT_LOCAL_EVERY = 4;   // 국부 지지 검사 주기 (틱)
-export const STRUCT_GLOBAL_EVERY = 12; // 전체 하중 검사 주기 (틱)
+export const STRUCT_GLOBAL_EVERY = 6;  // 전체 하중 검사 주기 (틱)
 
 // 화면 품질 단계
 export const QUALITY = {

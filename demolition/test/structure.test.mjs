@@ -56,6 +56,7 @@ test('global pass: calibrated tower stands, one-sided loss topples or crushes', 
     box(w, o, 58, yb + 11, 58, 83, yb + 11, 83, M.CONCRETE);
   }
   bounds(w, o, { x0: 58, x1: 83, y0: 0, y1: 35, z0: 58, z1: 83 });
+  w.enableStats(o); w.recountChunks();
   s.globalPass([o], true);
   assert.ok(w.owners[o].kStrength > 0);
   let r = s.globalPass([o]);

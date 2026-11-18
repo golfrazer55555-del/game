@@ -136,7 +136,7 @@ export class Rubble {
     return true;
   }
 
-  // 활성 잔해 처리. maxMoves로 한 번에 움직이는 수를 제한
+  // 활성 잔해 처리. maxMoves로 한 번에 움직이는 수를 제한 (움직일 수 없는 칸은 바로 목록에서 뺀다)
   step(rng, maxMoves = 500) {
     const w = this.w, mat = w.mat, own = w.own;
     const act = w.rubbleActive;
@@ -148,11 +148,11 @@ export class Rubble {
       const i = items[k];
       const m = mat[i];
       if (!(m & RUBBLE)) continue;
-      if (moves >= maxMoves) { act.add(i); continue; }
       const y = (i / LAYER) | 0;
       if (y === 0) continue;
       const below = i - LAYER;
       if (mat[below] === 0) {
+        if (moves >= maxMoves) { act.add(i); continue; }
         // 자유 낙하: 바로 바닥까지
         let j = below, yy = y - 1;
         while (yy > 0 && mat[j - LAYER] === 0) { j -= LAYER; yy--; }
@@ -164,27 +164,29 @@ export class Rubble {
         continue;
       }
       if (!(m & GRANULAR)) continue;
-      // 대각선 아래로 미끄러짐 (안식각)
-      if (rng.next() < 0.35) { act.add(i); continue; }   // 천천히 흘러내리도록
+      // 대각선 아래로 미끄러짐 (안식각). 갈 곳이 없으면 목록에서 빠진다
       const x = i % GX, z = ((i / GX) | 0) % GZ;
       const dir = rng.int(4);
-      let moved = false;
-      for (let t = 0; t < 4 && !moved; t++) {
+      let target = -1;
+      for (let t = 0; t < 4; t++) {
         const d = (dir + t) & 3;
         const dx = d === 0 ? 1 : d === 1 ? -1 : 0, dz = d === 2 ? 1 : d === 3 ? -1 : 0;
         const nx = x + dx, nz = z + dz;
         if (nx < 0 || nx >= GX || nz < 0 || nz >= GZ) continue;
         const side = i + dx + GX * dz;
         if (mat[side] !== 0 || mat[side - LAYER] !== 0) continue;
-        const o = own[i];
-        w.remove(i);
-        let j = side - LAYER, yy = y - 1;
-        while (yy > 0 && mat[j - LAYER] === 0) { j -= LAYER; yy--; }
-        w.set(j, m, o);
-        act.add(j);
-        moves++;
-        moved = true;
+        target = side;
+        break;
       }
+      if (target < 0) continue;
+      if (moves >= maxMoves || rng.next() < 0.35) { act.add(i); continue; }   // 천천히 흘러내리도록
+      const o = own[i];
+      w.remove(i);
+      let j = target - LAYER, yy = y - 1;
+      while (yy > 0 && mat[j - LAYER] === 0) { j -= LAYER; yy--; }
+      w.set(j, m, o);
+      act.add(j);
+      moves++;
     }
     return moves;
   }

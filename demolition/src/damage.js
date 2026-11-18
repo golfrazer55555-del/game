@@ -32,7 +32,8 @@ export class Damage {
       items.push(i, m, own[i]);
     }
     // 먼저 모두 비운다 (잔해가 아직 지워질 칸에 떨어지지 않도록)
-    for (let k = 0; k < items.length; k += 3) w.remove(items[k]);
+    if (items.length > 600) w.removeMany(list);
+    else for (let k = 0; k < items.length; k += 3) w.remove(items[k]);
     return this.scatter(items, opts, mode, (k) => {
       const i = items[k];
       return [(i % GX + 0.5) * VS, (((i / LAYER) | 0) + 0.5) * VS, ((((i / GX) | 0) % GZ) + 0.5) * VS];

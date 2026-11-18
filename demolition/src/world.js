@@ -1,6 +1,21 @@
 // 복셀 월드: 블록 저장, 청크 단위 변경 추적, 레이캐스트
 import { GX, GY, GZ, CS, VS } from './config.js';
-import { RUBBLE, GRANULAR, isStruct } from './materials.js';
+import { RUBBLE, GRANULAR, isStruct, STRENGTH, DENSITY } from './materials.js';
+
+const VOL = VS * VS * VS;
+
+// 소유자별 층 단면 통계 (블록이 바뀔 때마다 더하고 뺀다)
+export class LayerStats {
+  constructor() {
+    const f = () => new Float64Array(GY);
+    this.A = f(); this.SX = f(); this.SZ = f(); this.SXX = f(); this.SZZ = f();
+    this.MW = f(); this.MX = f(); this.MZ = f();
+    this.cnt = new Int32Array(GY);
+    this.hx = new Int32Array(GY * GX);
+    this.hz = new Int32Array(GY * GZ);
+  }
+  copyFrom(o) { for (const k of ['A', 'SX', 'SZ', 'SXX', 'SZZ', 'MW', 'MX', 'MZ', 'cnt', 'hx', 'hz']) this[k].set(o[k]); return this; }
+}
 
 export const LAYER = GX * GZ;
 export const N = GX * GY * GZ;
@@ -29,8 +44,11 @@ export class World {
     this.rubTotal = new Float64Array(256);
     this.lotRect = null;                          // {x0,x1,z0,z1} 칸 단위
     this.zoneRect = null;
+    this.st = [];                                 // 소유자별 LayerStats
     this.version = 0;
   }
+
+  enableStats(o) { if (!this.st[o]) this.st[o] = new LayerStats(); }
 
   // 소유자별 집계 (sign = +1 추가, -1 제거)
   account(x, y, z, m, own, sign) {
@@ -44,6 +62,14 @@ export class World {
     } else {
       this.structCount[own] += sign;
       if (y >= 4) this.standing[own] += sign;
+      const S = this.st[own];
+      if (S) {
+        const st = STRENGTH[m] * sign, ms = DENSITY[m] * VOL * sign;
+        const cx = x + 0.5, cz = z + 0.5;
+        S.A[y] += st; S.SX[y] += st * cx; S.SZ[y] += st * cz; S.SXX[y] += st * cx * cx; S.SZZ[y] += st * cz * cz;
+        S.MW[y] += ms; S.MX[y] += ms * cx; S.MZ[y] += ms * cz;
+        S.cnt[y] += sign; S.hx[y * GX + x] += sign; S.hz[y * GZ + z] += sign;
+      }
     }
   }
 
@@ -141,6 +167,43 @@ export class World {
     return old;
   }
 
+  // 여러 블록을 한 번에 제거 (큰 덩어리가 떨어져 나갈 때). 메시 갱신 표시는 청크 단위로 한 번만.
+  removeMany(list) {
+    const mat = this.mat, own = this.own;
+    const touched = new Set();
+    const d = this.damage;
+    let any = false;
+    for (let k = 0; k < list.length; k++) {
+      const i = list[k];
+      const old = mat[i];
+      if (old === 0) continue;
+      const x = i % GX, z = ((i / GX) | 0) % GZ, y = (i / LAYER) | 0;
+      const ci = (x >> 4) + NCX * ((z >> 4) + NCZ * (y >> 4));
+      this.chunkCount[ci]--;
+      const o = own[i];
+      mat[i] = 0; own[i] = 0;
+      this.account(x, y, z, old, o, -1);
+      if (!(old & RUBBLE)) {
+        this.removedByOwner[o]++;
+        if (o) this.dirtyOwners.add(o);
+        if (x < d.x0) d.x0 = x; if (x > d.x1) d.x1 = x; if (y < d.y0) d.y0 = y; if (y > d.y1) d.y1 = y; if (z < d.z0) d.z0 = z; if (z > d.z1) d.z1 = z;
+        any = true;
+      }
+      touched.add(ci);
+      if (y + 1 < GY && (mat[i + LAYER] & RUBBLE)) this.rubbleActive.add(i + LAYER);
+    }
+    if (any) this.structDirty = true;
+    this.version++;
+    for (const ci of touched) {
+      if (!this.colDirty[ci]) { this.colDirty[ci] = 1; this.colDirtyList.push(ci); }
+      const cx = ci % NCX, cz = ((ci / NCX) | 0) % NCZ, cy = (ci / (NCX * NCZ)) | 0;
+      for (let ay = Math.max(0, cy - 1); ay <= Math.min(NCY - 1, cy + 1); ay++) for (let az = Math.max(0, cz - 1); az <= Math.min(NCZ - 1, cz + 1); az++) for (let ax = Math.max(0, cx - 1); ax <= Math.min(NCX - 1, cx + 1); ax++) {
+        const c = ax + NCX * (az + NCZ * ay);
+        if (!this.meshDirty[c]) { this.meshDirty[c] = 1; this.meshDirtyList.push(c); }
+      }
+    }
+  }
+
   wakeAbove(x, y, z) {
     if (y + 1 >= GY) return;
     const up = x + GX * (z + GZ * (y + 1));
@@ -215,6 +278,24 @@ export class World {
     this.markAllDirty();
   }
 
+  // 청크·소유자 집계를 처음부터 다시 계산
+  recountChunks() {
+    this.chunkCount.fill(0);
+    for (const a of [this.structCount, this.standing, this.rubOut, this.rubZone, this.rubTotal]) a.fill(0);
+    this.st = this.st.map((S) => (S ? new LayerStats() : S));
+    const mat = this.mat;
+    for (let y = 0; y < GY; y++) for (let z = 0; z < GZ; z++) {
+      const row = GX * (z + GZ * y);
+      for (let x = 0; x < GX; x++) {
+        const m = mat[row + x];
+        if (!m) continue;
+        this.chunkCount[this.chunkOf(x, y, z)]++;
+        this.account(x, y, z, m, this.own[row + x], 1);
+      }
+    }
+    this.markAllDirty();
+  }
+
   // 각 소유자의 초기 구조 블록 수 기록
   countOwners() {
     const cnt = new Float64Array(256);
@@ -262,7 +343,8 @@ export class World {
   snapshot() {
     return { mat: this.mat.slice(), own: this.own.slice(), chunkCount: this.chunkCount.slice(), rubble: [...this.rubbleActive],
       removed: this.removedByOwner.slice(), damage: { ...this.damage }, dirtyOwners: [...this.dirtyOwners], structDirty: this.structDirty,
-      counts: [this.structCount, this.standing, this.rubOut, this.rubZone, this.rubTotal].map((a) => a.slice()) };
+      counts: [this.structCount, this.standing, this.rubOut, this.rubZone, this.rubTotal].map((a) => a.slice()),
+      st: this.st.map((S) => (S ? new LayerStats().copyFrom(S) : null)) };
   }
   restore(s) {
     this.mat.set(s.mat); this.own.set(s.own); this.chunkCount.set(s.chunkCount);
@@ -272,6 +354,7 @@ export class World {
     this.dirtyOwners = new Set(s.dirtyOwners);
     this.structDirty = s.structDirty;
     [this.structCount, this.standing, this.rubOut, this.rubZone, this.rubTotal].forEach((a, k) => a.set(s.counts[k]));
+    this.st = s.st.map((S) => (S ? new LayerStats().copyFrom(S) : S));
     this.markAllDirty();
   }
 }

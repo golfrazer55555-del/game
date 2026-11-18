@@ -1,5 +1,5 @@
 // 고정 시간 간격 시뮬레이션. 같은 상태에서 같은 입력이면 항상 같은 결과가 나온다 (발파 리플레이용).
-import { SIM_DT, STRUCT_LOCAL_EVERY, STRUCT_GLOBAL_EVERY, WARN_RATIO } from './config.js';
+import { SIM_DT, STRUCT_LOCAL_EVERY, STRUCT_GLOBAL_EVERY, WARN_RATIO, GX, GY, GZ } from './config.js';
 import { World } from './world.js';
 import { Structure } from './structure.js';
 import { Physics } from './physics.js';
@@ -34,9 +34,17 @@ export class Sim {
   // 건물 생성 직후: 메시·충돌체 준비, 강도 보정
   finalizeSetup() {
     const w = this.world;
-    w.countOwners();
+    // 생성 과정에서 생긴 허공에 뜬 블록 정리 (조용히 제거)
+    for (let pass = 0; pass < 4; pass++) {
+      const lost = this.struct.localSupport({ x0: 0, y0: 0, z0: 0, x1: GX - 1, y1: GY - 1, z1: GZ - 1 });
+      if (!lost.length) break;
+      for (const i of lost) { w.mat[i] = 0; w.own[i] = 0; }
+      w.recountChunks();
+    }
     const structOwners = [];
-    for (let o = 1; o < w.owners.length; o++) if (w.owners[o].box) structOwners.push(o);
+    for (let o = 1; o < w.owners.length; o++) if (w.owners[o].box) { structOwners.push(o); w.enableStats(o); }
+    w.recountChunks();
+    w.countOwners();
     this.struct.globalPass(structOwners, true);
     w.takeDamageBox();
     w.dirtyOwners.clear();
@@ -53,14 +61,23 @@ export class Sim {
     const dt = SIM_DT;
     this.tick++;
     this.time += dt;
+    const P = this.prof;
+    let t = P ? performance.now() : 0;
+    const mark = (k) => { if (!P) return; const n = performance.now(); P[k] = (P[k] || 0) + n - t; P[k + 'Max'] = Math.max(P[k + 'Max'] || 0, n - t); t = n; };
     for (const m of this.machines) m.step(dt, this);
     if (this.explosives) this.explosives.step(dt, this);
-    this.phys.rebuildDirty();
+    mark('machines');
+    if (this.tick % 3 === 0) this.phys.rebuildDirty();
+    mark('colliders');
     this.phys.step();
+    mark('physics');
     this.bodies.postStep();
+    mark('bodies');
     this.debris.step(dt, this.world, this.rubble);
     if (this.tick & 1) this.rubble.step(this.rng, 700);
+    mark('debris');
     this.structureStep();
+    mark('structure');
   }
 
   structureStep() {
@@ -77,7 +94,7 @@ export class Sim {
         this.pendingGlobal = true;
       }
     }
-    if (this.pendingGlobal && this.tick % STRUCT_GLOBAL_EVERY === 0 && w.dirtyOwners.size) {
+    if (this.tick % STRUCT_GLOBAL_EVERY === 0 && w.dirtyOwners.size) {
       const owners = [...w.dirtyOwners].sort((a, b) => a - b).filter((o) => w.owners[o] && w.owners[o].box);
       w.dirtyOwners.clear();
       this.pendingGlobal = false;

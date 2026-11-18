@@ -83,7 +83,7 @@ export class Bodies {
       b.mat[li] = m;
       b.own[li] = w.own[i];
     }
-    for (const i of indices) w.remove(i);
+    w.removeMany(indices);
     b.recount();
     b.pos = { x: x0 * VS, y: y0 * VS, z: z0 * VS };
     b.markAll();
@@ -399,11 +399,12 @@ export class Bodies {
     this.removeBody(b);
   }
 
-  // 멈춘 바디를 잔해 블록으로 월드에 굳힌다
+  // 멈춘 바디를 잔해 블록으로 월드에 굳힌다. 아래쪽부터 놓으며 빈틈으로 바로 떨어뜨린다.
   bake(b) {
     const w = this.sim.world, mat = w.mat;
     const out = [0, 0, 0];
     const rub = this.sim.rubble;
+    const byY = new Map();
     for (let y = 0; y < b.ly; y++) for (let z = 0; z < b.lz; z++) for (let x = 0; x < b.lx; x++) {
       const li = b.li(x, y, z);
       const m = b.mat[li];
@@ -412,13 +413,23 @@ export class Bodies {
       const gx = Math.floor(out[0] / VS), gy = Math.floor(out[1] / VS), gz = Math.floor(out[2] / VS);
       const o = b.own[li];
       if (gx < 0 || gx >= GX || gz < 0 || gz >= GZ) { rub.outsideBy[o] = (rub.outsideBy[o] || 0) + 1; continue; }
-      let yy = Math.max(0, Math.min(GY - 1, gy));
-      let i = gx + GX * (gz + GZ * yy);
-      let t = 0;
-      while (mat[i] !== 0 && t < 4 && yy < GY - 1) { yy++; i += LAYER; t++; }
-      if (mat[i] !== 0) continue;
-      w.set(i, (m & BASE) | RUBBLE, o);
-      w.rubbleActive.add(i);
+      const yy = Math.max(0, Math.min(GY - 1, gy));
+      let list = byY.get(yy);
+      if (!list) byY.set(yy, (list = []));
+      list.push(gx, gz, (m & BASE) | RUBBLE, o);
+    }
+    const ys = [...byY.keys()].sort((p, q) => p - q);
+    for (const y of ys) {
+      const list = byY.get(y);
+      for (let k = 0; k < list.length; k += 4) {
+        const gx = list[k], gz = list[k + 1];
+        let yy = y, i = gx + GX * (gz + GZ * yy);
+        let t = 0;
+        while (mat[i] !== 0 && t < 4 && yy < GY - 1) { yy++; i += LAYER; t++; }
+        if (mat[i] !== 0) continue;
+        while (yy > 0 && mat[i - LAYER] === 0) { yy--; i -= LAYER; }
+        w.set(i, list[k + 2], list[k + 3]);
+      }
     }
     this.sim.fx.push({ t: 'settle', x: b.pos.x, y: b.pos.y, z: b.pos.z, n: b.count });
     this.removeBody(b);
