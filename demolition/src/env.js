@@ -87,10 +87,22 @@ export function createEnvironment(scene, quality) {
   outer.position.set(W / 2, -0.02, D / 2);
   outer.receiveShadow = quality.shadows;
   scene.add(outer);
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(1400, SITE.roadZ1 * VS), new THREE.MeshLambertMaterial({ color: 0x3e4042 }));
+  // 왕복 도로와 건너편 인도 (부지 텍스처 바깥으로 이어짐)
+  const roadW = SITE.roadZ1 * VS + 16;
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(1400, roadW), new THREE.MeshLambertMaterial({ color: 0x3e4042 }));
   road.rotation.x = -Math.PI / 2;
-  road.position.set(W / 2, -0.01, SITE.roadZ1 * VS / 2);
+  road.position.set(W / 2, -0.012, SITE.roadZ1 * VS - roadW / 2);
+  road.receiveShadow = quality.shadows;
   scene.add(road);
+  const walk = new THREE.Mesh(new THREE.PlaneGeometry(1400, 4), new THREE.MeshLambertMaterial({ color: 0xa9a59b }));
+  walk.rotation.x = -Math.PI / 2;
+  walk.position.set(W / 2, -0.011, SITE.roadZ1 * VS - roadW - 2);
+  scene.add(walk);
+  // 차선
+  const lines = new THREE.Mesh(new THREE.PlaneGeometry(1400, 0.15), new THREE.MeshBasicMaterial({ color: 0xdeb234 }));
+  lines.rotation.x = -Math.PI / 2;
+  lines.position.set(W / 2, -0.008, SITE.roadZ1 * VS - 8);
+  scene.add(lines);
 
   // 먼 도시
   env.city = createCity(center);
@@ -137,12 +149,12 @@ function createCity(center) {
   };
   const W = GX * VS, D = GZ * VS;
   const blocks = [];
-  // 길 건너편
-  for (let x = -120; x < W + 120; x += 0) { const w = 9 + rng.next() * 14; blocks.push([x, -14 - (12 + rng.next() * 14), w, 12 + rng.next() * 12]); x += w + 2 + rng.next() * 4; }
+  // 길 건너편 (넓은 도로 너머)
+  for (let x = -120; x < W + 120; x += 0) { const w = 9 + rng.next() * 14, d = 12 + rng.next() * 12; blocks.push([x, -22 - d, w, d]); x += w + 2 + rng.next() * 4; }
   // 뒤쪽
   for (let x = -120; x < W + 120; x += 0) { const w = 10 + rng.next() * 16; blocks.push([x, D + 14 + rng.next() * 8, w, 12 + rng.next() * 14]); x += w + 3 + rng.next() * 5; }
   // 양옆
-  for (let z = 10; z < D + 10; z += 0) { const d = 10 + rng.next() * 12; blocks.push([-14 - (12 + rng.next() * 10), z, 12 + rng.next() * 8, d]); blocks.push([W + 12 + rng.next() * 4, z, 12 + rng.next() * 8, d]); z += d + 4; }
+  for (let z = 10; z < D + 10; z += 0) { const d = 10 + rng.next() * 12; blocks.push([-20 - (12 + rng.next() * 10), z, 12 + rng.next() * 8, d]); blocks.push([W + 18 + rng.next() * 4, z, 12 + rng.next() * 8, d]); z += d + 4; }
   // 더 먼 곳
   for (let k = 0; k < 70; k++) {
     const a = rng.next() * Math.PI * 2, r = 110 + rng.next() * 160;

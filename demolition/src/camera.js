@@ -82,9 +82,11 @@ export class CameraRig {
 
   // 발파 연출: 건물 중심과 높이를 받아 천천히 도는 넓은 화면
   startCine(center, height, angleIdx = 0) {
-    const angles = [[0.55, 0.22, 2.0], [-0.9, 0.08, 1.4], [2.3, 0.5, 2.4], [0.0, 0.85, 2.2]];
+    // [방위각, 고도, 거리 배율] — 현장 안쪽(도로 위·부지 모서리)에서만 찍어 배경 건물에 가리지 않게
+    const angles = [[0.5, 0.32, 1.25], [-0.75, 0.16, 0.95], [0.05, 0.62, 1.15], [1.1, 0.24, 1.0]];
     const [yaw, pitch, dk] = angles[angleIdx % angles.length];
-    this.cine = { center: center.clone(), yaw, pitch, dist: Math.max(30, height * dk + 18), t: 0, height };
+    const dist = Math.min(44, Math.max(26, height * dk + 14));
+    this.cine = { center: center.clone(), yaw, pitch, dist, t: 0, height };
     this.mode = 'cine';
   }
   endCine(prevMode = 'follow') { this.cine = null; this.mode = prevMode; }
@@ -95,8 +97,10 @@ export class CameraRig {
     if (this.mode === 'cine' && this.cine) {
       const c = this.cine;
       c.t += dt;
-      const yaw = c.yaw + c.t * 0.05;
+      const yaw = c.yaw + c.t * 0.035;
       pos.set(c.center.x + Math.sin(yaw) * Math.cos(c.pitch) * c.dist, c.center.y * 0.4 + Math.sin(c.pitch) * c.dist + 2, c.center.z - Math.cos(yaw) * Math.cos(c.pitch) * c.dist);
+      // 현장 범위 밖으로 나가지 않게 (배경 도시에 묻히지 않도록)
+      pos.x = clamp(pos.x, -4, 52); pos.z = clamp(pos.z, -5, 51);
       look.set(c.center.x, c.height * 0.35, c.center.z);
       this.yaw = yaw; this.pitch = c.pitch; this.dist = c.dist;
       this.cur.yaw = yaw; this.cur.pitch = c.pitch; this.cur.dist = c.dist;

@@ -257,6 +257,7 @@ export class Session {
     this.nextCut = 2.6;
     this.cineAngle = 1;
     this.g.rig.startCine(this.cineCenter(), this.buildingHeight(), this.cineAngle);
+    this.g.ui.renderBlast(this);
     this.g.ui.toast('다시 보기 — 슬로모션', 'tip', 2000);
   }
   endReplay() {

@@ -350,8 +350,8 @@ export class UI {
         <button class="px-btn danger fire" data-act="fire" ${ex.list.length ? '' : 'disabled'}>발파!</button></div>`;
     } else if (st === 'countdown') {
       html += `<div class="row"><b style="font-size:18px">발파 준비 — 대피 완료</b><button class="px-btn small fire" data-act="cancel">취소</button></div>`;
-    } else if (st === 'firing') {
-      html += `<div class="row"><b style="font-size:18px">발파 중…</b></div>`;
+    } else if (st === 'firing' || session.replaying) {
+      html += `<div class="row"><b style="font-size:18px">${session.replaying ? '다시 보기 (슬로모션)' : '발파 중…'}</b></div>`;
     } else {
       html += `<div class="row"><b>발파 완료</b><button class="px-btn small" data-act="replay" ${session.blastSnap ? '' : 'disabled'}>다시 보기</button><button class="px-btn small primary" data-act="again">추가 발파 준비</button></div>`;
     }
