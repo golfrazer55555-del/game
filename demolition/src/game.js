@@ -149,6 +149,7 @@ export class Game {
     this.rig.yaw = 0.55; this.rig.pitch = 0.42; this.rig.dist = s.activeKind === 'blast' ? 52 : 26;
     this.ui.setupHUD(s);
     s.selectMachine(s.activeKind);
+    this.rig.cur.yaw = this.rig.yaw; this.rig.cur.pitch = this.rig.pitch; this.rig.cur.dist = this.rig.dist;
     this.ui.setStructButton(false);
     this.input.zero();
   }
@@ -256,7 +257,8 @@ export class Game {
     this.env.sun.shadow.mapSize.set(this.quality.shadowSize, this.quality.shadowSize);
     this.presenter.setQuality(this.quality);
     if (this.session) { this.session.chunkView.setShadows(this.quality.shadows); this.session.bodyView.shadows = this.quality.shadows; }
-    this.voxMat.needsUpdate = true;
+    // 그림자 설정이 바뀌면 모든 재질을 다시 컴파일해야 한다
+    this.scene.traverse((o) => { const m = o.material; if (m) (Array.isArray(m) ? m : [m]).forEach((mm) => { mm.needsUpdate = true; }); });
   }
 
   resetProgress() { this.save = resetSave(); writeSave(this.save); }
@@ -312,7 +314,11 @@ export class Game {
         else { this.audio.setWinch(0); this.audio.setAlarm(false); this.audio.setHydraulic(Math.min(1, Math.abs(mc.s.boomV) * 3 + Math.abs(mc.s.armV) * 3 + Math.abs(mc.s.attV) * 2 + Math.abs(mc.s.swingV))); }
       } else if (!s.demo) { this.audio.setEngine(false); this.audio.setWinch(0); this.audio.setAlarm(false); this.audio.setHydraulic(0); }
       const cab = s.active ? () => s.active.cabView() : null;
-      if (s.demo) this.rig.yaw += dt * 0.04;
+      if (s.demo) {
+        this.rig.yaw += dt * 0.04;
+        this.demoCheck = (this.demoCheck || 0) - dt;
+        if (this.demoCheck <= 0) { this.demoCheck = 5; if (s.measure().demolish > 0.6 && this.ui.screen === 'title') { this.startDemo(); return; } }
+      }
       this.rig.update(dt, s.focusPoint(), cab);
       this.hudT -= dt;
       if (this.hudT <= 0 && !s.demo && this.ui.screen === 'play') {

@@ -235,16 +235,16 @@ export class Excavator {
         s.load++;
       }
     }
-    // 쏟기: 버킷이 아래를 향하면
-    const facingDown = J.a3 < -100 * DEG || J.a3 > 70 * DEG;
-    const opened = s.att > -10 * DEG;
-    if (s.load > 0 && (opened || facingDown) && !curling) {
+    // 쏟기: 버킷 날이 아래를 향하면 (오므린 상태에서는 날이 위를 향해 흙을 담고 있다)
+    const facingDown = Math.sin(J.a3) < -0.5;
+    if (s.load > 0 && facingDown && !curling) {
       s.dumpT += dt;
       if (s.dumpT > 0.05) {
         s.dumpT = 0;
         const n = Math.min(s.load, 30);
         const truck = this.truck;
-        if (truck && truck.catches(J.T)) {
+        const mid = [(J.A[0] + J.T[0]) / 2, (J.A[1] + J.T[1]) / 2, (J.A[2] + J.T[2]) / 2];
+        if (truck && (truck.catches(J.T) || truck.catches(mid))) {
           truck.receive(s.loadMats, n, sim);
           s.load -= n;
           this.drainMats(n);

@@ -55,3 +55,30 @@ test('excavator crusher bites and breaker chips concrete', async () => {
   console.log(`crusher removed ${before - afterCrush}, breaker removed ${afterCrush - afterBreak}, contact=${ex.s.contact}, jaw=${ex.s.jaw.toFixed(2)}`);
   assert.ok(before - afterBreak > 20, 'excavator removed material');
 });
+
+test('bucket scoops rubble and dumps it into the truck', async () => {
+  const { sim, layout } = await site('warehouse');
+  const { Truck } = await import('../src/machines/truck.js');
+  const w = sim.world;
+  // 굴착기 앞에 잔해 더미를 만든다
+  const ex = new Excavator(sim, { x: 96, z: 70, heading: 0 }, { boomset: 'std', attach: 'bucket' });
+  const truck = new Truck({ x: 96, z: 70, heading: 0 });
+  ex.truck = truck;
+  sim.machines = [ex];
+  ex.active = true;
+  const J = ex.joints();
+  const gx = Math.floor(J.T[0] / 0.25), gz = Math.floor(J.T[2] / 0.25);
+  for (let y = 0; y < 6; y++) for (let z = gz - 6; z <= gz + 6; z++) for (let x = gx - 6; x <= gx + 6; x++) w.set(w.idx(x, y, z), 64 | 128 | 5, 0);
+  // 버킷을 내려 오므려서 퍼 담기
+  for (let k = 0; k < 60 * 2; k++) { sim.input = { lx: 0, ly: 0, rx: 1, ry: -1, a: false }; sim.step(); }
+  for (let k = 0; k < 60 * 3; k++) { sim.input = { lx: 0, ly: 0, rx: -1, ry: 0, a: false }; sim.step(); }
+  const loaded = ex.s.load;
+  // 트럭을 버킷 아래로 옮기고 쏟기
+  for (let k = 0; k < 60 * 2; k++) { sim.input = { lx: 0, ly: 0, rx: 0, ry: 1, a: false }; sim.step(); }
+  const P = ex.joints().T;
+  truck.home.x = truck.s.x = P[0]; truck.home.z = truck.s.z = P[2] + 1.4;
+  for (let k = 0; k < 60 * 3; k++) { sim.input = { lx: 0, ly: 0, rx: 1, ry: 0, a: false }; sim.step(); }
+  console.log(`scooped ${loaded}, truck load ${truck.s.load}, value ₩${Math.round(truck.s.value)}`);
+  assert.ok(loaded > 20, 'bucket picked up rubble');
+  assert.ok(truck.s.load > 0, 'truck received rubble');
+});

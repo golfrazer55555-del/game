@@ -18,7 +18,7 @@ export class Truck {
     const cs = Math.cos(s.heading), sn = Math.sin(s.heading);
     const dx = p[0] - s.x, dz = p[2] - s.z;
     const u = dx * cs - dz * sn, v = dx * sn + dz * cs;   // 트럭 좌표 (v = 앞뒤)
-    return Math.abs(u) < 1.5 && v > -3.4 && v < 0.6 && p[1] > 1.2 && p[1] < 6;
+    return Math.abs(u) < 1.7 && v > -3.6 && v < 0.8 && p[1] > 0.8 && p[1] < 10;
   }
   receive(mats, n, sim) {
     const s = this.s;

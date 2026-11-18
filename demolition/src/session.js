@@ -8,7 +8,7 @@ import { Crane } from './machines/crane.js';
 import { Excavator } from './machines/excavator.js';
 import { Explosives } from './machines/explosives.js';
 import { Truck } from './machines/truck.js';
-import { measure } from './contracts.js';
+import { measure, RATES } from './contracts.js';
 import { STRENGTH } from './materials.js';
 import { level, owns } from './save.js';
 
@@ -105,7 +105,12 @@ export class Session {
     for (const [k, m] of Object.entries(this.machines)) m.active = k === kind;
     const rig = this.g.rig;
     if (kind === 'blast') { if (rig.mode !== 'cine') rig.setMode('site'); }
-    else if (rig.mode === 'site') rig.setMode('follow');
+    else {
+      if (rig.mode === 'site') rig.setMode('follow');
+      // 장비 뒤쪽 비스듬한 곳에서 보도록 카메라를 돌린다
+      const mc = this.machines[kind];
+      if (mc && !this.demo) { rig.yaw = -mc.yaw() + (kind === 'crane' ? 0.75 : 0.5); rig.pitch = kind === 'crane' ? 0.4 : 0.36; rig.dist = kind === 'crane' ? 27 : 17; }
+    }
     if (!this.demo) {
       this.g.ui.machineChanged(this);
       this.tip(kind);
@@ -277,6 +282,12 @@ export class Session {
 
   // ───── 측정 ─────
   measure() { return measure(this); }
+  runningCost() {
+    let c = 0;
+    for (const [k, sec] of Object.entries(this.machineSeconds)) c += (sec / 60) * (RATES[k] || 0);
+    if (this.explosives) c += this.explosives.cost;
+    return c;
+  }
   overloads() { return this.machines.crane ? this.machines.crane.s.overloads : 0; }
   blocksBroken() { let n = 0; const w = this.sim.world; for (let o = 0; o < w.owners.length; o++) n += w.removedByOwner[o]; return n; }
 

@@ -215,7 +215,8 @@ export class UI {
         <li>${touch ? '왼쪽 레버 ↑↓' : k('W') + k('S')} 붐 올리기 / 내리기</li>
         <li>${touch ? '오른쪽 레버 ↑↓' : k('↑') + k('↓')} 윈치: 쇠공 올리기 / 내리기</li>
         <li>${touch ? '빨간 버튼' : k('Space')} 누르는 동안 자유낙하 (위에서 떨어뜨리기)</li>
-        <li><b>흔들기</b>: 선회를 좌우로 박자 맞춰 반복하면 진자처럼 점점 크게 흔들린다</li>
+        <li><b>흔들기</b>: 붐을 박자 맞춰 올렸다 내리면 앞뒤로, 선회를 좌우로 반복하면 옆으로 진자처럼 점점 크게 흔들린다</li>
+        <li>붐을 내리며(반경을 늘리며) 쇠공을 건물 쪽으로 밀어 넣어도 된다</li>
         <li>과부하(LMI) 100%를 넘으면 붐 내리기·윈치 풀기가 막히고 안전 위반이 기록된다</li></ul></div>
       <div><h3>굴착기</h3><ul>
         <li>${touch ? '왼쪽 레버 ←→' : k('A') + k('D')} 선회, ${touch ? '↑↓' : k('W') + k('S')} 암 펴기 / 접기</li>
@@ -311,10 +312,12 @@ export class UI {
   updateHUD(session, m) {
     const c = session.contract;
     $('hud-time').textContent = formatTime(m.time) + (session.free ? '' : ` / ${formatTime(c.time)}`);
-    const key = c.goals.map((g) => goalValue(g, m) + goalMet(g, m)).join('|');
+    const spent = session.free ? 0 : session.runningCost();
+    const key = c.goals.map((g) => goalValue(g, m) + goalMet(g, m)).join('|') + '|' + Math.round(spent / 1000);
     if (key !== this.lastObj) {
       this.lastObj = key;
-      $('hud-obj').innerHTML = c.goals.map((g) => `<li class="${goalMet(g, m) ? 'ok' : ''}"><span class="ic">${goalMet(g, m) ? '✔' : '✖'}</span><span>${goalText(g)}</span><span class="v">${goalValue(g, m)}</span></li>`).join('');
+      $('hud-obj').innerHTML = c.goals.map((g) => `<li class="${goalMet(g, m) ? 'ok' : ''}"><span class="ic">${goalMet(g, m) ? '✔' : '✖'}</span><span>${goalText(g)}</span><span class="v">${goalValue(g, m)}</span></li>`).join('') +
+        (session.free ? '' : `<li class="dim"><span class="ic"></span><span>지출 (가동비·장약)</span><span class="v">${won(spent)}</span></li>`);
     }
     $('btn-finish').hidden = !goalMet(c.goals[0], m) || session.finished;
     const mc = session.active;
