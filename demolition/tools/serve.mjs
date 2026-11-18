@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = process.argv.includes('--dist');
-const root = normalize(join(here, '..', dist ? 'dist' : ''));
+const repo = process.argv.includes('--repo');
+const root = normalize(join(here, '..', repo ? '..' : dist ? 'dist' : ''));
 const port = Number(process.env.PORT) || (dist ? 8091 : 8090);
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',

@@ -4,7 +4,7 @@ name: Deploy demolition game to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/elegant-sagan-adckqi]
     paths:
       - 'demolition/**'
       - '.github/workflows/demolition-pages.yml'

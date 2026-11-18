@@ -1,4 +1,12 @@
-> **새 게임: [철거왕 (demolition/)](demolition/README.md)** — 크레인 쇠공·굴착기·발파로 픽셀 블록 건물을 철거하는 시뮬레이션. PC·모바일, 크롬 설치(PWA) 지원.
+# 철거왕 — 픽셀 블록 철거 시뮬레이터
+
+이 저장소 맨 위의 `index.html`이 **철거왕**입니다. 자세한 설명: [demolition/README.md](demolition/README.md)
+
+- 바로 해 보기: GitHub Pages 주소(`https://golfrazer55555-del.github.io/game/`) 또는 `npm start` 후 `http://localhost:8090`
+- 소스는 `demolition/` 폴더. 고친 뒤 `cd demolition && npm install && npm run publish` 를 하면 맨 위 파일이 새로 만들어집니다.
+- 예전 게임 「포화의 전선」은 [line-of-fire/](line-of-fire/) 폴더로 옮겼습니다 (`/line-of-fire/` 주소).
+
+---
 
 # 포화의 전선 (Line of Fire: 1944)
 
