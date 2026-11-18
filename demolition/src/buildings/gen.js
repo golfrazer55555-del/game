@@ -124,7 +124,7 @@ export function warehouse(b, X, Z) {
     const xc = Math.min(x, X + W - 2);
     for (let z = Z; z < Z + D; z++) { b.put(xc, H + 1, z, M.STEEL); b.put(xc, ridge(z) - 1, z, M.STEEL); }
   }
-  for (let x = X - 1; x <= X + W; x++) for (let z = Z - 1; z <= Z + D; z++) b.put(x, ridge(Math.max(Z, Math.min(Z + D - 1, z))), z, ((x >> 1) & 1) ? M.METAL_SHEET : M.METAL_RED);
+  for (let x = X - 1; x <= X + W; x++) for (let z = Z - 1; z <= Z + D; z++) b.put(x, ridge(Math.max(Z, Math.min(Z + D - 1, z))), z, (x - X) % 16 === 15 ? M.STEEL_RUST : M.METAL_SHEET);
   // 안에 쌓인 상자들
   for (let k = 0; k < 9; k++) {
     const cx = X + 4 + b.rng.int(W - 12), cz = Z + 6 + b.rng.int(D - 14);
