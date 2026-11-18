@@ -1,0 +1,21 @@
+{
+  "name": "demolition-king",
+  "version": "1.0.0",
+  "private": true,
+  "description": "철거왕: 픽셀 블록 건물 철거 시뮬레이터",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "build": "node tools/build.mjs",
+    "preview": "node tools/serve.mjs --dist",
+    "icons": "node tools/make-icons.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "0.19.3",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}
